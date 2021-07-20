@@ -35,7 +35,7 @@ class Adapter implements AdapterContract
      *
      * @param array $config
      */
-    public function __construct($config)
+    public function __construct(array $config)
     {
         $database = new Medoo($config);
         $this->database = $database;
@@ -50,7 +50,7 @@ class Adapter implements AdapterContract
      *
      * @return Adapter
      */
-    public static function newAdapter($config)
+    public static function newAdapter(array $config)
     {
         return new static($config);
     }
@@ -73,22 +73,32 @@ class Adapter implements AdapterContract
         ]);
     }
 
-    public function savePolicyLine($ptype, array $rule)
+    /**
+     * savePolicyLine function.
+     *
+     * @param string $ptype
+     * @param array  $rule
+     * 
+     * @return void
+     */
+    public function savePolicyLine(string $ptype, array $rule): void
     {
         $data = [];
         foreach ($rule as $key => $value) {
-            $data['v'.strval($key)] = $value;
+            $data['v' . strval($key)] = $value;
         }
 
-        return $this->database->insert($this->casbinRuleTableName, $data);
+        $this->database->insert($this->casbinRuleTableName, $data);
     }
 
     /**
      * loads all policy rules from the storage.
      *
      * @param Model $model
+     * 
+     * @return void
      */
-    public function loadPolicy($model)
+    public function loadPolicy(Model $model): void
     {
         $data = $this->database->select($this->casbinRuleTableName, ['ptype', 'v0', 'v1', 'v2', 'v3', 'v4', 'v5']);
         foreach ($data as $row) {
@@ -104,22 +114,20 @@ class Adapter implements AdapterContract
      *
      * @param Model $model
      *
-     * @return bool
+     * @return void
      */
-    public function savePolicy($model)
+    public function savePolicy(Model $model): void
     {
-        foreach ($model->model['p'] as $ptype => $ast) {
+        foreach ($model['p'] as $ptype => $ast) {
             foreach ($ast->policy as $rule) {
                 $this->savePolicyLine($ptype, $rule);
             }
         }
-        foreach ($model->model['g'] as $ptype => $ast) {
+        foreach ($model['g'] as $ptype => $ast) {
             foreach ($ast->policy as $rule) {
                 $this->savePolicyLine($ptype, $rule);
             }
         }
-
-        return true;
     }
 
     /**
@@ -130,11 +138,11 @@ class Adapter implements AdapterContract
      * @param string $ptype
      * @param array  $rule
      *
-     * @return mixed
+     * @return void
      */
-    public function addPolicy($sec, $ptype, $rule)
+    public function addPolicy(string $sec, string $ptype, array $rule): void
     {
-        return $this->savePolicyLine($ptype, $rule);
+        $this->savePolicyLine($ptype, $rule);
     }
 
     /**
@@ -144,9 +152,9 @@ class Adapter implements AdapterContract
      * @param string $ptype
      * @param array  $rule
      *
-     * @return mixed
+     * @return void
      */
-    public function removePolicy($sec, $ptype, $rule)
+    public function removePolicy(string $sec, string $ptype, array $rule): void
     {
         $where['ptype'] = $ptype;
 
@@ -154,7 +162,7 @@ class Adapter implements AdapterContract
             $where['v'.strval($key)] = $value;
         }
 
-        return $this->database->delete($this->casbinRuleTableName, ['AND' => $where]);
+        $this->database->delete($this->casbinRuleTableName, ['AND' => $where]);
     }
 
     /**
@@ -163,12 +171,12 @@ class Adapter implements AdapterContract
      *
      * @param string $sec
      * @param string $ptype
-     * @param int    $fieldIndex
-     * @param mixed  ...$fieldValues
+     * @param int $fieldIndex
+     * @param string ...$fieldValues
      *
-     * @return mixed
+     * @return void
      */
-    public function removeFilteredPolicy($sec, $ptype, $fieldIndex, ...$fieldValues)
+    public function removeFilteredPolicy(string $sec, string $ptype, int $fieldIndex, string ...$fieldValues): void
     {
         $where['ptype'] = $ptype;
 
@@ -180,7 +188,7 @@ class Adapter implements AdapterContract
             }
         }
 
-        return $this->database->delete($this->casbinRuleTableName, ['AND' => $where]);
+        $this->database->delete($this->casbinRuleTableName, ['AND' => $where]);
     }
 
     /**
