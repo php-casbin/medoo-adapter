@@ -3,6 +3,7 @@
 namespace CasbinAdapter\Medoo;
 
 use Casbin\Persist\Adapter as AdapterContract;
+use Casbin\Persist\BatchAdapter as BatchAdapterContract;
 use Casbin\Persist\AdapterHelper;
 use Casbin\Model\Model;
 use Medoo\Medoo;
@@ -12,7 +13,7 @@ use Medoo\Medoo;
  *
  * @author techlee@qq.com
  */
-class Adapter implements AdapterContract
+class Adapter implements AdapterContract, BatchAdapterContract
 {
     use AdapterHelper;
 
@@ -78,7 +79,7 @@ class Adapter implements AdapterContract
      *
      * @param string $ptype
      * @param array  $rule
-     * 
+     *
      * @return void
      */
     public function savePolicyLine(string $ptype, array $rule): void
@@ -95,7 +96,7 @@ class Adapter implements AdapterContract
      * loads all policy rules from the storage.
      *
      * @param Model $model
-     * 
+     *
      * @return void
      */
     public function loadPolicy(Model $model): void
@@ -146,6 +147,30 @@ class Adapter implements AdapterContract
     }
 
     /**
+     * Adds a policy rules to the storage.
+     * This is part of the Auto-Save feature.
+     *
+     * @param string $sec
+     * @param string $ptype
+     * @param string[][] $rules
+     */
+    public function addPolicies(string $sec, string $ptype, array $rules): void
+    {
+        $cols = [];
+        $i = 0;
+
+        foreach ($rules as $rule) {
+            $temp['ptype'] = $ptype;
+            foreach ($rule as $key => $value) {
+                $temp['v'. strval($key)] = $value;
+            }
+            $cols[$i++] = $temp ?? [];
+            $temp = [];
+        }
+        $this->database->insert($this->casbinRuleTableName, $cols);
+    }
+
+    /**
      * This is part of the Auto-Save feature.
      *
      * @param string $sec
@@ -163,6 +188,23 @@ class Adapter implements AdapterContract
         }
 
         $this->database->delete($this->casbinRuleTableName, ['AND' => $where]);
+    }
+
+    /**
+     * Removes policy rules from the storage.
+     * This is part of the Auto-Save feature.
+     *
+     * @param string $sec
+     * @param string $ptype
+     * @param string[][] $rules
+     */
+    public function removePolicies(string $sec, string $ptype, array $rules): void
+    { 
+        $this->database->action(function () use ($sec, $ptype, $rules) {
+            foreach ($rules as $rule) {
+                $this->removePolicy($sec, $ptype, $rule);
+            }
+        });
     }
 
     /**
