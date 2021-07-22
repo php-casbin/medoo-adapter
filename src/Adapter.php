@@ -4,6 +4,7 @@ namespace CasbinAdapter\Medoo;
 
 use Casbin\Persist\Adapter as AdapterContract;
 use Casbin\Persist\BatchAdapter as BatchAdapterContract;
+use Casbin\Persist\UpdatableAdapter as UpdatableAdapterContract;
 use Casbin\Persist\AdapterHelper;
 use Casbin\Model\Model;
 use Medoo\Medoo;
@@ -13,7 +14,7 @@ use Medoo\Medoo;
  *
  * @author techlee@qq.com
  */
-class Adapter implements AdapterContract, BatchAdapterContract
+class Adapter implements AdapterContract, BatchAdapterContract, UpdatableAdapterContract
 {
     use AdapterHelper;
 
@@ -199,7 +200,7 @@ class Adapter implements AdapterContract, BatchAdapterContract
      * @param string[][] $rules
      */
     public function removePolicies(string $sec, string $ptype, array $rules): void
-    { 
+    {
         $this->database->action(function () use ($sec, $ptype, $rules) {
             foreach ($rules as $rule) {
                 $this->removePolicy($sec, $ptype, $rule);
@@ -231,6 +232,31 @@ class Adapter implements AdapterContract, BatchAdapterContract
         }
 
         $this->database->delete($this->casbinRuleTableName, ['AND' => $where]);
+    }
+
+    /**
+     * Updates a policy rule from storage.
+     * This is part of the Auto-Save feature.
+     *
+     * @param string $sec
+     * @param string $ptype
+     * @param string[] $oldRule
+     * @param string[] $newPolicy
+     */
+    public function updatePolicy(string $sec, string $ptype, array $oldRule, array $newPolicy): void
+    {
+        $where = ['ptype' => $ptype,];
+        
+        foreach ($oldRule as $k => $v) {
+            $where['v' . strval($k)] = $v;
+        }
+        
+        $columns = [];
+        foreach ($newPolicy as $k => $v) {
+            $columns['v' . strval($k)][$where['v' . strval($k)]] = $v;
+        }
+
+        $this->database->replace($this->casbinRuleTableName, $columns, $where);
     }
 
     /**
