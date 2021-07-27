@@ -6,6 +6,8 @@ use Casbin\Enforcer;
 use Casbin\Model\Model;
 use CasbinAdapter\Medoo\Adapter as DatabaseAdapter;
 use PHPUnit\Framework\TestCase;
+use Casbin\Persist\Adapters\Filter;
+use Casbin\Exceptions\InvalidFilterTypeException;
 
 class AdapterTest extends TestCase
 {
@@ -195,6 +197,50 @@ EOT
             ['bob', 'data2', 'read'],
             ['data2_admin', 'data2', 'read'],
             ['data2_admin', 'data2', 'write'],
+        ], $e->getPolicy());
+    }
+
+    public function testLoadFilteredPolicy()
+    {
+        $e = $this->getEnforcer();
+        $e->clearPolicy();
+        $adapter = $e->getAdapter();
+        $adapter->setFiltered(true);
+        $this->assertEquals([], $e->getPolicy());
+        
+        // invalid filter type
+        try {
+            $filter = ['alice', 'data1', 'read'];
+            $e->loadFilteredPolicy($filter);
+            $exception = InvalidFilterTypeException::class;
+            $this->fail("Expected exception $exception not thrown");
+        } catch (InvalidFilterTypeException $exception) {
+            $this->assertEquals("invalid filter type", $exception->getMessage());
+        }
+
+        // string
+        $filter = "v0 = 'bob'";
+        $e->loadFilteredPolicy($filter);
+        $this->assertEquals([
+            ['bob', 'data2', 'write']
+        ], $e->getPolicy());
+        
+        // Filter
+        $filter = new Filter(['v2'], ['read']);
+        $e->loadFilteredPolicy($filter);
+        $this->assertEquals([
+            ['alice', 'data1', 'read'],
+            ['data2_admin', 'data2', 'read'],
+        ], $e->getPolicy());
+
+        // Closure
+        $e->loadFilteredPolicy(function (\Medoo\Medoo $database, string $casbinRuleTableName, array $columns, array &$rows) {
+            $where = \Medoo\Medoo::raw('WHERE ' . "v1 = 'data1'");
+            $rows = $database->select($casbinRuleTableName, $columns, $where);
+        });
+
+        $this->assertEquals([
+            ['alice', 'data1', 'read'],
         ], $e->getPolicy());
     }
 

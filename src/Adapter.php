@@ -5,16 +5,20 @@ namespace CasbinAdapter\Medoo;
 use Casbin\Persist\Adapter as AdapterContract;
 use Casbin\Persist\BatchAdapter as BatchAdapterContract;
 use Casbin\Persist\UpdatableAdapter as UpdatableAdapterContract;
+use Casbin\Persist\FilteredAdapter as FilteredAdapterContract;
 use Casbin\Persist\AdapterHelper;
 use Casbin\Model\Model;
 use Medoo\Medoo;
+use Casbin\Exceptions\CasbinException;
+use Casbin\Persist\Adapters\Filter;
+use Casbin\Exceptions\InvalidFilterTypeException;
 
 /**
  * Medoo Adapter.
  *
  * @author techlee@qq.com
  */
-class Adapter implements AdapterContract, BatchAdapterContract, UpdatableAdapterContract
+class Adapter implements AdapterContract, BatchAdapterContract, UpdatableAdapterContract, FilteredAdapterContract
 {
     use AdapterHelper;
 
@@ -31,6 +35,11 @@ class Adapter implements AdapterContract, BatchAdapterContract, UpdatableAdapter
      * @var string
      */
     public $casbinRuleTableName = 'casbin_rule';
+
+    /**
+     * @var bool
+     */
+    private $filtered = false;
 
     /**
      * Adapter constructor.
@@ -55,6 +64,26 @@ class Adapter implements AdapterContract, BatchAdapterContract, UpdatableAdapter
     public static function newAdapter(array $config)
     {
         return new static($config);
+    }
+
+    /**
+     * Returns true if the loaded policy has been filtered.
+     *
+     * @return bool
+     */
+    public function isFiltered(): bool
+    {
+        return $this->filtered;
+    }
+
+    /**
+     * Sets filtered parameter.
+     *
+     * @param bool $filtered
+     */
+    public function setFiltered(bool $filtered): void
+    {
+        $this->filtered = $filtered;
     }
 
     /**
@@ -257,6 +286,56 @@ class Adapter implements AdapterContract, BatchAdapterContract, UpdatableAdapter
         }
 
         $this->database->replace($this->casbinRuleTableName, $columns, $where);
+    }
+
+    /**
+     * UpdatePolicies updates some policy rules to storage, like db, redis.
+     *
+     * @param string $sec
+     * @param string $ptype
+     * @param string[][] $oldRules
+     * @param string[][] $newRules
+     * @return void
+     */
+    public function updatePolicies(string $sec, string $ptype, array $oldRules, array $newRules): void
+    {
+        throw new CasbinException('not implemented');
+    }
+
+    /**
+     * Loads only policy rules that match the filter.
+     *
+     * @param Model $model
+     * @param mixed $filter
+     */
+    public function loadFilteredPolicy(Model $model, $filter): void
+    {
+        $columns = ['ptype', 'v0', 'v1', 'v2', 'v3', 'v4', 'v5'];
+        if (is_string($filter)) {
+            $where = Medoo::raw('WHERE ' . $filter);
+            $rows = $this->database->select($this->casbinRuleTableName, $columns, $where);
+        } elseif ($filter instanceof Filter) {
+            foreach ($filter->p as $k => $v) {
+                $where[$v] = $filter->g[$k];
+            }
+            $rows = $this->database->select($this->casbinRuleTableName, $columns, $where);
+        } elseif ($filter instanceof \Closure) {
+            $rows = [];
+            $filter($this->database, $this->casbinRuleTableName, $columns, $rows);
+        } else {
+            throw new InvalidFilterTypeException('invalid filter type');
+        }
+
+        foreach ($rows as $row) {
+            $row = array_filter($row, function ($value) {
+                return !is_null($value) && $value !== '';
+            });
+            $line = implode(', ', array_filter($row, function ($val) {
+                return '' != $val && !is_null($val);
+            }));
+            $this->loadPolicyLine(trim($line), $model);
+        }
+        $this->setFiltered(true);
     }
 
     /**
