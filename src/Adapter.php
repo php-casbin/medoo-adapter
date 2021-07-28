@@ -274,7 +274,7 @@ class Adapter implements AdapterContract, BatchAdapterContract, UpdatableAdapter
      */
     public function updatePolicy(string $sec, string $ptype, array $oldRule, array $newPolicy): void
     {
-        $where = ['ptype' => $ptype,];
+        $where = ['ptype' => $ptype];
         
         foreach ($oldRule as $k => $v) {
             $where['v' . strval($k)] = $v;
@@ -282,10 +282,10 @@ class Adapter implements AdapterContract, BatchAdapterContract, UpdatableAdapter
         
         $columns = [];
         foreach ($newPolicy as $k => $v) {
-            $columns['v' . strval($k)][$where['v' . strval($k)]] = $v;
+            $columns['v' . strval($k)] = $v;
         }
 
-        $this->database->replace($this->casbinRuleTableName, $columns, $where);
+        $this->database->update($this->casbinRuleTableName, $columns, $where);
     }
 
     /**
@@ -299,7 +299,11 @@ class Adapter implements AdapterContract, BatchAdapterContract, UpdatableAdapter
      */
     public function updatePolicies(string $sec, string $ptype, array $oldRules, array $newRules): void
     {
-        throw new CasbinException('not implemented');
+        $this->database->action(function () use ($sec, $ptype, $oldRules, $newRules) {
+            foreach ($oldRules as $i => $oldRule) {
+                $this->updatePolicy($sec, $ptype, $oldRule, $newRules[$i]);
+            }
+        });
     }
 
     /**

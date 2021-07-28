@@ -200,6 +200,34 @@ EOT
         ], $e->getPolicy());
     }
 
+    public function testUpdatePolicies()
+    {
+        $e = $this->getEnforcer();
+        $this->assertEquals([
+            ['alice', 'data1', 'read'],
+            ['bob', 'data2', 'write'],
+            ['data2_admin', 'data2', 'read'],
+            ['data2_admin', 'data2', 'write'],
+        ], $e->getPolicy());
+
+        $oldRules = [
+            ['alice', 'data1', 'read'],
+            ['bob', 'data2', 'write']
+        ];
+        $newRules = [
+            ['alice', 'data1', 'write'],
+            ['bob', 'data2', 'read']
+        ];
+        $e->updatePolicies($oldRules, $newRules);
+
+        $this->assertEquals([
+            ['alice', 'data1', 'write'],
+            ['bob', 'data2', 'read'],
+            ['data2_admin', 'data2', 'read'],
+            ['data2_admin', 'data2', 'write'],
+        ], $e->getPolicy());
+    }
+
     public function testLoadFilteredPolicy()
     {
         $e = $this->getEnforcer();
