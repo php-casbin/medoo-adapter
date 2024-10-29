@@ -6,5 +6,6 @@ composer.lock
 .idea/
 *.iml
 
+.phpunit*
 # coverage report
 /build
