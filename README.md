@@ -1,6 +1,6 @@
 # Medoo Adapter for Casbin
 
-[![Build Status](https://travis-ci.org/php-casbin/medoo-adapter.svg?branch=master)](https://travis-ci.org/php-casbin/medoo-adapter)
+[![Build Status](https://github.com/php-casbin/medoo-adapter/actions/workflows/build.yml/badge.svg)](https://github.com/php-casbin/medoo-adapter/actions/workflows/build.yml)
 [![Coverage Status](https://coveralls.io/repos/github/php-casbin/medoo-adapter/badge.svg)](https://coveralls.io/github/php-casbin/medoo-adapter)
 [![Latest Stable Version](https://poser.pugx.org/casbin/medoo-adapter/v/stable)](https://packagist.org/packages/casbin/medoo-adapter)
 [![Total Downloads](https://poser.pugx.org/casbin/medoo-adapter/downloads)](https://packagist.org/packages/casbin/medoo-adapter)
